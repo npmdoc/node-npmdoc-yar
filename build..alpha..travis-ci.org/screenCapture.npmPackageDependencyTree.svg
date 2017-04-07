@@ -1,0 +1,19 @@
+<svg height="254" width="720" xmlns="http://www.w3.org/2000/svg">
+<rect height="254" fill="#555" width="720"></rect>
+<text fill="#7f7" font-family="Courier New" font-size="12" xml:space="preserve">
+<tspan x="10" y="26">1 megabytes installed</tspan>
+<tspan x="10" y="42"></tspan>
+<tspan x="10" y="58">node_modules</tspan>
+<tspan x="10" y="74">└─┬ yar@8.1.2 </tspan>
+<tspan x="10" y="90">  ├── hoek@4.1.1 </tspan>
+<tspan x="10" y="106">  ├─┬ statehood@5.0.1 </tspan>
+<tspan x="10" y="122">  │ ├── boom@4.3.1 </tspan>
+<tspan x="10" y="138">  │ ├── cryptiles@3.1.1 </tspan>
+<tspan x="10" y="154">  │ ├── iron@4.0.4 </tspan>
+<tspan x="10" y="170">  │ ├── items@2.1.1 </tspan>
+<tspan x="10" y="186">  │ └─┬ joi@10.4.1 </tspan>
+<tspan x="10" y="202">  │   ├── isemail@2.2.1 </tspan>
+<tspan x="10" y="218">  │   └── topo@2.0.2 </tspan>
+<tspan x="10" y="234">  └── uuid@3.0.1</tspan>
+</text>
+</svg>

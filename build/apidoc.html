@@ -1,0 +1,244 @@
+<div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a
+
+        href="https://github.com/hapijs/yar#readme"
+
+    >yar (v8.1.2)</a>
+</h1>
+<h4>Cookie jar plugin for Hapi</h4>
+<div class="apidocSectionDiv"><a
+    href="#apidoc.tableOfContents"
+    id="apidoc.tableOfContents"
+><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.yar">module yar</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.yar.register">
+            function <span class="apidocSignatureSpan">yar.</span>register
+            <span class="apidocSignatureSpan">(server, options, next)</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.yar" id="apidoc.module.yar">module yar</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.yar.register" id="apidoc.element.yar.register">
+        function <span class="apidocSignatureSpan">yar.</span>register
+        <span class="apidocSignatureSpan">(server, options, next)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">(server, options, next) =&#x3e; {
+
+    // Validate options and apply defaults
+
+    const settings = Hoek.applyToDefaults(internals.defaults, options);
+    Hoek.assert(!settings.cookieOptions.encoding, &#x27;Cannot override cookie encoding&#x27;);
+    const rawCookieOptions = Hoek.clone(settings.cookieOptions);
+    settings.cookieOptions.encoding = &#x27;iron&#x27;;
+    rawCookieOptions.encoding = &#x27;none&#x27;;
+    if (settings.customSessionIDGenerator) {
+        Hoek.assert(typeof settings.customSessionIDGenerator === &#x27;function&#x27;, &#x27;customSessionIDGenerator should be a function&#x27;);
+    }
+
+    // Configure cookie
+
+    server.state(settings.name, settings.cookieOptions);
+
+    // Decorate the server with yar object.
+
+    const getState = () =&#x3e; {
+
+        return {};
+    };
+    server.decorate(&#x27;request&#x27;, &#x27;yar&#x27;, getState, {
+        apply: true
+    });
+
+    // Setup session store
+
+    const cache = server.cache(settings.cache);
+
+    // Pre auth
+
+    server.ext(&#x27;onPreAuth&#x27;, (request, reply) =&#x3e; {
+
+        // If this route configuration indicates to skip, do nothing.
+        if (Hoek.reach(request, &#x27;route.settings.plugins.yar.skip&#x27;)) {
+            return reply.continue();
+        }
+
+        const generateSessionID = () =&#x3e; {
+
+            const id = settings.customSessionIDGenerator ? settings.customSessionIDGenerator(request) : Uuid.v4();
+            Hoek.assert(typeof id === &#x27;string&#x27;, &#x27;Session ID should be a string&#x27;);
+            return id;
+        };
+
+        // Load session data from cookie
+
+        const load = () =&#x3e; {
+
+            request.yar = Object.assign(request.yar, request.state[settings.name]);
+            if (request.yar.id) {
+
+                request.yar._isModified = false;
+                if (!settings.errorOnCacheNotReady &#x26;&#x26; !cache.isReady() &#x26;&#x26; !request.yar._store) {
+                    request.log(&#x27;Cache is not ready: not loading sessions from cache&#x27;);
+                    request.yar._store = {};
+                }
+                if (request.yar._store) {
+                    return decorate();
+                }
+
+                request.yar._store = {};
+                return cache.get(request.yar.id, (err, value, cached) =&#x3e; {
+
+                    if (err) {
+                        return decorate(err);
+                    }
+
+                    if (cached &#x26;&#x26; cached.item) {
+                        request.yar._store = cached.item;
+                    }
+
+                    return decorate();
+                });
+            }
+
+            request.yar.id = generateSessionID();
+            request.yar._store = {};
+            request.yar._isModified = settings.storeBlank;
+
+            decorate();
+        };
+
+        const decorate = (err) =&#x3e; {
+
+            if (request.yar._store._lazyKeys) {
+                request.yar._isLazy = true;                 // Default to lazy mode if previously set
+                request.yar._store._lazyKeys.forEach((key) =&#x3e; {
+
+                    request.yar[key] = request.yar._store[key];
+                    delete request.yar._store[key];
+                });
+            }
+
+            request.yar.reset = () =&#x3e; {
+
+                cache.drop(request.yar.id, () =&#x3e; {});
+                request.yar.id = generateSessionID();
+                request.yar._store = {};
+                request.yar._isModified = true;
+            };
+
+            request.yar.get = (key, clear) =&#x3e; {
+
+                const value = request.yar._store[key];
+                if (clear) {
+                    request.yar.clear(key);
+                }
+
+                return value;
+            };
+
+            request.yar.set = (key, value) =&#x3e; {
+
+                Hoek.assert(key, &#x27;Missing key&#x27;);
+                Hoek.assert(typeof key === &#x27;string&#x27; || (typeof key === &#x27;object&#x27; &#x26;&#x26; value === undefined), &#x27;Invalid yar.set() arguments
+&#x27;);
+
+                request.yar._isModified = true;
+
+                if (typeof key === &#x27;string&#x27;) {
+                    // convert key of type string into an object, for consistency.
+                    const holder = {};
+                    holder[key] = value;
+                    key = holder;
+                }
+
+                Object. ...</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+Please note that there are other default cookie options that can impact your security.
+Please look at the description of the cookie options below to make sure this is doing
+what you expect.
+*/
+
+var server = new Hapi.Server();
+
+server.<span class="apidocCodeKeywordSpan">register</span>({
+    register: require(&#x27;yar&#x27;),
+    options: options
+}, function (err) { });
+```
+
+## Password considerations
+...</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
